@@ -39,6 +39,7 @@ void checkNTP(){
 void setup(){
   ledctl.led_setup();
   Serial.begin(115200);
+  WiFi.setHostname("FishTank");
   WiFi.begin(ssid, password);  
 }
 
