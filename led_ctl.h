@@ -9,9 +9,13 @@ class LED_CTL{
     LED_CTL(){};
     void led_setup();
     void led_loop(unsigned int ms);
+    void updateTime(int hour, int minute);
   private:
     unsigned int lastUpdate=0;
-    void ChangePalettePeriodically();
+    int lastMinute = 0;
+    int lastHour = 0;
+    uint8_t brightnessMax=0;
+    uint8_t calculateLight(int hour, int minute);
     void FillLEDsFromPaletteColors(uint8_t colorIndex);
     void SetupTotallyRandomPalette();
     void SetupBlackAndWhiteStripedPalette();
