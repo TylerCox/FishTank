@@ -4,8 +4,8 @@
 #include "Shared.h"
 
 
-#define NUM_LEDS    106
-#define BRIGHTNESS  255
+#define NUM_LEDS    104
+#define BRIGHTNESS  230
 #define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS];
@@ -41,8 +41,50 @@ CRGB leds[NUM_LEDS];
 CRGBPalette16 currentPalette;
 TBlendType    currentBlending;
 
-extern CRGBPalette16 myRedWhiteBluePalette;
-extern const TProgmemPalette16 myRedWhiteBluePalette_p PROGMEM;
+const CRGBPalette16 fall_color{
+  0x5db3ad,
+  0x9efff8,
+  0xccba6a,
+  0xffb8f4,
+  
+  0xb3a466,
+  0xffb8f4,
+  0xccba6a,
+  0xb3a466,
+
+  0x5db3ad,
+  0xb3a466,
+  0xffb8f4,
+  0x9efff8,
+
+  0xffb8f4,
+  0x9efff8,
+  0xccba6a,
+  0xb3a466,
+};
+
+const CRGBPalette16 venom_color{
+  0x8419b3,
+  0xffc754,
+  0xc43bff,
+  0x1bcc7a,
+  
+  0x20b36f,
+  0x1bcc7a,
+  0xc43bff,
+  0xffc754,
+  
+  0x8419b3,
+  0x20b36f,
+  0x1bcc7a,
+  0xffc754,
+
+  0xc43bff,
+  0x8419b3,
+  0x20b36f,
+  0x8419b3,
+  
+};
 
 void LED_CTL::led_setup() {
     delay( 3000 ); // power-up safety delay
@@ -76,44 +118,46 @@ void LED_CTL::FillLEDsFromPaletteColors( uint8_t colorIndex)
     }
 }
 
-uint8_t LED_CTL::calculateLight(int hour, int minute){
-  //1440 minutes in a day.
-  //https://www.desmos.com/calculator/yifocw4p2u
-  double pos = 2*(double(((hour*60)+minute))/1440);
-  pos = sin(M_PI*(pos+1)); //Offset +1;
-  pos += 0.8;
-  pos /= 1.5;
-  //Trim top and bottom.
-  if(pos>1){
-    pos=1;
-  }
-  if(pos<0){
-    pos=0;
-  }
-  return BRIGHTNESS*pos;
+int linear(int pos, int st, int nd, int x1, int x2){
+  pos-=st;
+  nd-=st;
+  double t = pos;
+  t/=nd;
+  int rate = x2-x1;
+  return (x1 + (rate*t));
 }
 
-void LED_CTL::updateTime(int hour, int minute){ 
-  if(minute != lastMinute || hour != lastHour){
-    brightnessMax = calculateLight(hour,minute);
-    lastMinute = minute;
-    lastHour = hour;
-    
-    currentPalette = LavaColors_p;
-    #if 0
+int protectedLinear(int pos, int st, int nd, int x1, int x2){
+  int ret = linear(pos,st,nd,x1,x2);
+  if(ret>BRIGHTNESS){
+    return BRIGHTNESS;
+  }
+  if(ret<0){
+    return 0;
+  }
+  return ret;
+}
+
+uint8_t LED_CTL::calculateLight(int hour, int minute){
     switch(hour){
+      case 0:
+      return protectedLinear(minute,
+        0,60,
+        ((BRIGHTNESS*2)/3),0);
+      break;
       case 1:
       case 2:
       case 3:
       case 4:
       case 5:
-        currentPalette = ForestColors_p;
-        break;
       case 6:
-        currentPalette = LavaColors_p;
-        break;
+      default:
+      return 0;
       case 7:
       case 8:
+      return protectedLinear((hour*60)+minute,
+        (7*60),(9*60),
+        0,BRIGHTNESS);
       case 9:
       case 10:
       case 11:
@@ -124,15 +168,60 @@ void LED_CTL::updateTime(int hour, int minute){
       case 16:
       case 17:
       case 18:
-        currentPalette = CloudColors_p;
-        break;
       case 19:
       case 20:
       case 21:
       case 22:
-      case 23:
+      return BRIGHTNESS;
+      case 23:      
+      return protectedLinear((hour*60)+minute,
+        (23*60),(24*60),
+        BRIGHTNESS,((BRIGHTNESS*2)/3));
+    } 
+}
+
+void LED_CTL::updateTime(int hour, int minute){ 
+  if(minute != lastMinute || hour != lastHour){
+    brightnessMax = calculateLight(hour,minute);
+    lastMinute = minute;
+    lastHour = hour;
+    
+    //currentPalette = LavaColors_p;
+    #if 1
+    switch(hour){
       case 0:
-        currentPalette = OceanColors_p;
+      case 1:
+      case 2:
+        currentPalette = venom_color;
+        break;
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:        
+      case 8:
+      case 9:
+        currentPalette = fall_color;
+        break;
+      case 10:
+      case 11:
+      case 12:
+      case 13:
+      case 14:
+      case 15:
+      case 16:
+      case 17:
+      case 18:
+      case 19:
+      case 20:
+      case 21:
+        currentPalette = CloudColors_p;
+        break;
+      case 22:
+        currentPalette = fall_color;
+        break;
+      case 23:
+        currentPalette = venom_color;
         break;
     } 
     #endif

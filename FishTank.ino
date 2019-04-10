@@ -8,14 +8,15 @@
 
 const char *ssid     = "SkyNet";
 const char *password = "thec@k3isalie";
-#define TIMEZONE_OFFSET -21600
+#define TIMEZONE_OFFSET_CST -21600 //6hours//November
+#define TIMEZONE_OFFSET_CDT -18000 //5hours//March
 
 bool wifiUp=false;
 
 WiFiUDP ntpUDP;
 // By default 'pool.ntp.org' is used with 60 seconds update interval and
 // no offset
-NTPClient timeClient(ntpUDP,TIMEZONE_OFFSET);
+NTPClient timeClient(ntpUDP,TIMEZONE_OFFSET_CDT);
 bool ntpStarted = false;
 
 LED_CTL ledctl;
@@ -83,7 +84,7 @@ void eventTriggers(unsigned int hours, unsigned int minutes){
   /*********************************************************
   GREEN LIGHT
   *********************************************************/
-  if(hours>=8 && hours <24){
+  if(hours>=9 && hours <22){
     digitalWrite(GREEN_LIGHT,HIGH);
   }else{
     digitalWrite(GREEN_LIGHT,LOW);
