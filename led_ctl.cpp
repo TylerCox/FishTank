@@ -189,11 +189,7 @@ void LED_CTL::updateTime(int hour, int minute){
     //currentPalette = LavaColors_p;
     #if 1
     switch(hour){
-      case 0:
-      case 1:
-      case 2:
-        currentPalette = venom_color;
-        break;
+      default:
       case 3:
       case 4:
       case 5:
@@ -201,8 +197,6 @@ void LED_CTL::updateTime(int hour, int minute){
       case 7:        
       case 8:
       case 9:
-        currentPalette = fall_color;
-        break;
       case 10:
       case 11:
       case 12:
@@ -215,11 +209,12 @@ void LED_CTL::updateTime(int hour, int minute){
       case 19:
       case 20:
       case 21:
-        currentPalette = CloudColors_p;
-        break;
-      case 22:
         currentPalette = fall_color;
         break;
+      case 0:
+      case 1:
+      case 2:
+      case 22:
       case 23:
         currentPalette = venom_color;
         break;
