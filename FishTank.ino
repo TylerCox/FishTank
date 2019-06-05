@@ -43,6 +43,7 @@ void setup(){
   pinMode(STATUS_LED,OUTPUT);
   pinMode(GREEN_LIGHT,OUTPUT);
   pinMode(AIR_CTRL,OUTPUT);
+  pinMode(CO2_CTRL,OUTPUT);
   
   digitalWrite(STATUS_LED,HIGH);
   Serial.begin(115200);
@@ -56,6 +57,7 @@ void setup(){
   digitalWrite(GREEN_LIGHT,HIGH);
   digitalWrite(AIR_CTRL,LOW );
   digitalWrite(STATUS_LED,LOW);
+  digitalWrite(CO2_CTRL,LOW);
   delay( 1000 );
 }
 
@@ -80,7 +82,6 @@ void loop(){
 
 void eventTriggers(unsigned int hours, unsigned int minutes){  
   
-#if 1
   /*********************************************************
   GREEN LIGHT
   *********************************************************/
@@ -89,11 +90,10 @@ void eventTriggers(unsigned int hours, unsigned int minutes){
   }else{
     digitalWrite(GREEN_LIGHT,LOW);
   }
-#endif
+  
   /*********************************************************
   AIR CONTROL
   *********************************************************/
-
   if(
     (hours>=10 && hours <23) 
       && minutes<30
@@ -102,6 +102,16 @@ void eventTriggers(unsigned int hours, unsigned int minutes){
   }else{
     digitalWrite(AIR_CTRL,LOW);
   }
-  
+
+  /*********************************************************
+  C02 CONTROL
+  *********************************************************/
+  if(hours>=7 && hours <22){
+    //Using CO2 active high so if power goes out then CO2 stops.
+    digitalWrite(CO2_CTRL,HIGH);
+  }else{
+    digitalWrite(CO2_CTRL,LOW);
+  }
+  }
 }
 
