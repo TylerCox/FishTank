@@ -81,11 +81,11 @@ void loop(){
 
 
 void eventTriggers(unsigned int hours, unsigned int minutes){  
-  
+#if 1
   /*********************************************************
   GREEN LIGHT
   *********************************************************/
-  if(hours>=9 && hours <22){
+  if(hours>=8 && hours <24){
     digitalWrite(GREEN_LIGHT,HIGH);
   }else{
     digitalWrite(GREEN_LIGHT,LOW);
@@ -97,21 +97,26 @@ void eventTriggers(unsigned int hours, unsigned int minutes){
   if(
     (hours>=10 && hours <23) 
       && minutes<30
-    ){
+  ){
     digitalWrite(AIR_CTRL,HIGH);
   }else{
     digitalWrite(AIR_CTRL,LOW);
   }
 
   /*********************************************************
-  C02 CONTROL
+  C02 CONTROL 
+  Duty cycle 1/10, pressure built up in line will
+  dissipate over the following 9 minutes. Keeps solenoid
+  from getting hot.
   *********************************************************/
-  if(hours>=7 && hours <22){
+  if((hours>=8 && hours <22)
+    && ((minutes%10)==0)
+  ){
     //Using CO2 active high so if power goes out then CO2 stops.
     digitalWrite(CO2_CTRL,HIGH);
   }else{
     digitalWrite(CO2_CTRL,LOW);
   }
-  }
+#endif
 }
 
