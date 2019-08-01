@@ -85,7 +85,7 @@ void eventTriggers(unsigned int hours, unsigned int minutes){
   /*********************************************************
   GREEN LIGHT
   *********************************************************/
-  if(hours>=8 && hours <24){
+  if(hours>=9 && hours <22){
     digitalWrite(GREEN_LIGHT,HIGH);
   }else{
     digitalWrite(GREEN_LIGHT,LOW);
