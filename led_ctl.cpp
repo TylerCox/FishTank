@@ -139,6 +139,9 @@ int protectedLinear(int pos, int st, int nd, int x1, int x2){
 }
 
 uint8_t LED_CTL::calculateLight(int hour, int minute){
+  if(GetMode()==mode_demo){
+    return BRIGHTNESS;
+  }
     switch(hour){
       case 0:
       return protectedLinear(minute,
