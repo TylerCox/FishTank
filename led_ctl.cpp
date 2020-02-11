@@ -4,8 +4,7 @@
 #include "Shared.h"
 
 
-#define NUM_LEDS    104
-#define BRIGHTNESS  230
+#define NUM_LEDS    160
 #define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS];
@@ -79,17 +78,17 @@ const CRGBPalette16 venom_color{
   0x1bcc7a,
   0xffc754,
 
-  0xc43bff,
-  0x8419b3,
-  0x20b36f,
-  0x8419b3,
+  0x000000, //0xc43bff,
+  0x000000, //0x8419b3,
+  0x000000, //0x20b36f,
+  0x000000, //0x8419b3,
   
 };
 
 void LED_CTL::led_setup() {
     delay( 3000 ); // power-up safety delay
     FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
-    FastLED.setBrightness(  BRIGHTNESS );
+    FastLED.setBrightness(  brightnessMax_ );
     
     currentPalette = CloudColors_p;
     currentBlending = LINEARBLEND;
@@ -98,8 +97,8 @@ void LED_CTL::led_setup() {
 
 void LED_CTL::led_loop(unsigned int ms)
 {
-    if(ms - this->lastUpdate >= UPDATES_PER_SECOND){
-      this->lastUpdate = ms;
+    if(ms - this->lastUpdate_ >= UPDATES_PER_SECOND){
+      this->lastUpdate_ = ms;
       
       static uint8_t startIndex = 0;
       startIndex = startIndex + 1; /* motion speed */
@@ -113,12 +112,12 @@ void LED_CTL::led_loop(unsigned int ms)
 void LED_CTL::FillLEDsFromPaletteColors( uint8_t colorIndex)
 {    
     for( int i = 0; i < NUM_LEDS; i++) {
-        leds[i] = ColorFromPalette( currentPalette, colorIndex, brightnessMax, currentBlending);
+        leds[i] = ColorFromPalette( currentPalette, colorIndex, brightness_, currentBlending);
         colorIndex += 3;
     }
 }
 
-int linear(int pos, int st, int nd, int x1, int x2){
+int LED_CTL::linear(int pos, int st, int nd, int x1, int x2){
   pos-=st;
   nd-=st;
   double t = pos;
@@ -127,10 +126,10 @@ int linear(int pos, int st, int nd, int x1, int x2){
   return (x1 + (rate*t));
 }
 
-int protectedLinear(int pos, int st, int nd, int x1, int x2){
+int LED_CTL::protectedLinear(int pos, int st, int nd, int x1, int x2){
   int ret = linear(pos,st,nd,x1,x2);
-  if(ret>BRIGHTNESS){
-    return BRIGHTNESS;
+  if(ret>brightnessMax_){
+    return brightnessMax_;
   }
   if(ret<0){
     return 0;
@@ -139,14 +138,15 @@ int protectedLinear(int pos, int st, int nd, int x1, int x2){
 }
 
 uint8_t LED_CTL::calculateLight(int hour, int minute){
+  #if 0
   if(GetMode()==mode_demo){
-    return BRIGHTNESS;
+    return brightnessMax_;
   }
     switch(hour){
       case 0:
       return protectedLinear(minute,
         0,60,
-        ((BRIGHTNESS*2)/3),0);
+        ((brightnessMax_*2)/3),0);
       break;
       case 1:
       case 2:
@@ -160,7 +160,7 @@ uint8_t LED_CTL::calculateLight(int hour, int minute){
       case 8:
       return protectedLinear((hour*60)+minute,
         (7*60),(9*60),
-        0,BRIGHTNESS);
+        0,brightnessMax_);
       case 9:
       case 10:
       case 11:
@@ -175,22 +175,24 @@ uint8_t LED_CTL::calculateLight(int hour, int minute){
       case 20:
       case 21:
       case 22:
-      return BRIGHTNESS;
+      return brightnessMax_;
       case 23:      
       return protectedLinear((hour*60)+minute,
         (23*60),(24*60),
-        BRIGHTNESS,((BRIGHTNESS*2)/3));
+        brightnessMax_,((brightnessMax_*2)/3));
     } 
+    #else
+    return brightnessMax_;
+    #endif
 }
 
 void LED_CTL::updateTime(int hour, int minute){ 
-  if(minute != lastMinute || hour != lastHour){
-    brightnessMax = calculateLight(hour,minute);
-    lastMinute = minute;
-    lastHour = hour;
+  if(minute != lastMinute_ || hour != lastHour_){
+    brightness_ = calculateLight(hour,minute);
+    lastMinute_ = minute;
+    lastHour_ = hour;
     
-    //currentPalette = LavaColors_p;
-    #if 1
+    #if 0
     switch(hour){
       default:
       case 3:
@@ -222,7 +224,19 @@ void LED_CTL::updateTime(int hour, int minute){
         currentPalette = venom_color;
         break;
     } 
+    #else
+    currentPalette = venom_color;
     #endif
+  }
+}
+
+void LED_CTL::setMaxBrightness(unsigned int val)
+{
+  if(val>=0 && val<=255)
+  {
+    brightnessMax_ = (uint8_t)val;
+    lastMinute_ = 0;
+    lastHour_ = 0;
   }
 }
 

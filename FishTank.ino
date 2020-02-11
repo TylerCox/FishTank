@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <FastLED.h>
+#include <stdlib.h>
 #include "Shared.h"
 #include "led_ctl.h"
 
@@ -11,6 +12,10 @@ const char *password = "thec@k3isalie";
 #define TIMEZONE_OFFSET_CST -21600 //6hours//November
 #define TIMEZONE_OFFSET_CDT -18000 //5hours//March
 #define MS_UNTIL_MODE_RETURN 1200000 //20 minutes
+#define MAX_UART_BUF 100
+
+char buff_in[MAX_UART_BUF];
+unsigned int buff_i = 0;
 
 bool wifiUp=false;
 
@@ -26,6 +31,8 @@ LED_CTL ledctl;
 
 void eventTriggers(unsigned int hours, unsigned int minutes);
 void buttonModeChange(unsigned int ms);
+void captureUart(void);
+void processUart(char * buff, unsigned int len);
 
 void checkNTP(){
   if(WiFi.status() == WL_CONNECTED){
@@ -73,9 +80,12 @@ void loop(){
     eventTriggers(timeClient.getHours()%24,timeClient.getMinutes()%60);
     ledctl.updateTime(timeClient.getHours()%24,timeClient.getMinutes()%60);
     
-    Serial.println(timeClient.getFormattedTime());
+    //Serial.println(timeClient.getFormattedTime());
     ms=0;
   }
+
+  captureUart();
+    
   ms++;
   buttonModeChange(millis());
   ledctl.led_loop(millis());
@@ -83,7 +93,48 @@ void loop(){
   FastLED.delay(1);
 } 
 
+void captureUart(void)
+{
+  unsigned int len = buff_i;
+  while(Serial.available()>0)
+  {
+    char bt = Serial.read();
+    Serial.print(bt);
+    buff_in[buff_i++]=bt;
+    if(buff_i>=MAX_UART_BUF)
+    {
+      buff_in[MAX_UART_BUF-1]=0;
+      buff_i=0;
+    }
+    else if(bt == '\n')
+    {
+      buff_in[buff_i-1]=0;
+      buff_i=0;
+    }    
 
+    if(buff_i==0){
+      //Send string.
+      Serial.print(" processing ");
+      processUart(buff_in,len);
+    }
+  }
+  
+}
+
+void processUart(char * buff, unsigned int len)
+{
+  if(buff != 0)
+  {
+    long int val = strtol(buff,0,10);
+    Serial.print(" ");
+    Serial.print(val);
+    if(val>=1 && val <=255)
+    {
+      Serial.println(" Updating Brightness");
+      ledctl.setMaxBrightness(val);
+    }
+  }
+}
 
 void eventTriggers(unsigned int hours, unsigned int minutes){  
 #if 1
