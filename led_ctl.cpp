@@ -9,7 +9,6 @@
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS];
 
-#define UPDATES_PER_SECOND 100
 
 // This example shows several ways to set up and use 'palettes' of colors
 // with FastLED.
@@ -78,10 +77,10 @@ const CRGBPalette16 venom_color{
   0x1bcc7a,
   0xffc754,
 
-  0x000000, //0xc43bff,
-  0x000000, //0x8419b3,
-  0x000000, //0x20b36f,
-  0x000000, //0x8419b3,
+  0xc43bff,
+  0x8419b3,
+  0x20b36f,
+  0x8419b3,
   
 };
 
@@ -97,14 +96,18 @@ void LED_CTL::led_setup() {
 
 void LED_CTL::led_loop(unsigned int ms)
 {
-    if(ms - this->lastUpdate_ >= UPDATES_PER_SECOND){
-      this->lastUpdate_ = ms;
+    if(ms - this->lastLedMove_ >= speedMS_ )
+    {
+      this->lastLedMove_ = ms;
       
       static uint8_t startIndex = 0;
       startIndex = startIndex + 1; /* motion speed */
       
-      FillLEDsFromPaletteColors( startIndex);
-      
+      FillLEDsFromPaletteColors( startIndex);      
+    }
+    
+    if(ms - this->lastUpdate_ >= updateMS_ ){
+      this->lastUpdate_ = ms;      
       FastLED.show();
     }
 }
@@ -138,10 +141,9 @@ int LED_CTL::protectedLinear(int pos, int st, int nd, int x1, int x2){
 }
 
 uint8_t LED_CTL::calculateLight(int hour, int minute){
-  #if 0
-  if(GetMode()==mode_demo){
-    return brightnessMax_;
-  }
+    if(GetMode()!=mode_normal){
+      return brightnessMax_;
+    }
     switch(hour){
       case 0:
       return protectedLinear(minute,
@@ -180,19 +182,19 @@ uint8_t LED_CTL::calculateLight(int hour, int minute){
       return protectedLinear((hour*60)+minute,
         (23*60),(24*60),
         brightnessMax_,((brightnessMax_*2)/3));
-    } 
-    #else
-    return brightnessMax_;
-    #endif
+    }
 }
 
 void LED_CTL::updateTime(int hour, int minute){ 
+  if(GetMode()!=mode_normal){
+    currentPalette = venom_color;
+    return;
+  }
   if(minute != lastMinute_ || hour != lastHour_){
     brightness_ = calculateLight(hour,minute);
     lastMinute_ = minute;
     lastHour_ = hour;
     
-    #if 0
     switch(hour){
       default:
       case 3:
@@ -224,9 +226,6 @@ void LED_CTL::updateTime(int hour, int minute){
         currentPalette = venom_color;
         break;
     } 
-    #else
-    currentPalette = venom_color;
-    #endif
   }
 }
 
@@ -239,4 +238,3 @@ void LED_CTL::setMaxBrightness(unsigned int val)
     lastHour_ = 0;
   }
 }
-

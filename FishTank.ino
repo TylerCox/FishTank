@@ -1,7 +1,9 @@
 #include <NTPClient.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
+
 #include <FastLED.h>
+
 #include <stdlib.h>
 #include "Shared.h"
 #include "led_ctl.h"
@@ -25,17 +27,19 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP,TIMEZONE_OFFSET_CST);
 bool ntpStarted = false;
 static RUNNING_MODE globalMode=mode_normal;
+static unsigned int modeResetCounter=0;
 RUNNING_MODE GetMode(void){return globalMode;}
 
 LED_CTL ledctl;
 
 void eventTriggers(unsigned int hours, unsigned int minutes);
 void buttonModeChange(unsigned int ms);
-void captureUart(void);
-void processUart(char * buff, unsigned int len);
+void captureUart(unsigned int ms);
+void processUart(char * buff, unsigned int len, unsigned int ms);
 
 void checkNTP(){
   if(WiFi.status() == WL_CONNECTED){
+    
     digitalWrite(STATUS_LED,1);
     wifiUp=true;
     if(!ntpStarted){
@@ -84,7 +88,7 @@ void loop(){
     ms=0;
   }
 
-  captureUart();
+  captureUart(ms);
     
   ms++;
   buttonModeChange(millis());
@@ -93,7 +97,7 @@ void loop(){
   FastLED.delay(1);
 } 
 
-void captureUart(void)
+void captureUart(unsigned int ms)
 {
   unsigned int len = buff_i;
   while(Serial.available()>0)
@@ -106,32 +110,57 @@ void captureUart(void)
       buff_in[MAX_UART_BUF-1]=0;
       buff_i=0;
     }
-    else if(bt == '\n')
+    else if(bt == '\n' || bt == '\r')
     {
       buff_in[buff_i-1]=0;
       buff_i=0;
     }    
 
-    if(buff_i==0){
+    if(buff_i==0 && len > 0){
       //Send string.
       Serial.print(" processing ");
-      processUart(buff_in,len);
+      processUart(buff_in,len,ms);
     }
   }
   
 }
 
-void processUart(char * buff, unsigned int len)
+void processUart(char * buff, unsigned int len, unsigned int ms)
 {
+  char path = buff[0];
+  buff++;
+  
   if(buff != 0)
   {
     long int val = strtol(buff,0,10);
+    Serial.print(path);
     Serial.print(" ");
     Serial.print(val);
-    if(val>=1 && val <=255)
+    switch(path)
     {
-      Serial.println(" Updating Brightness");
-      ledctl.setMaxBrightness(val);
+      case 'b':
+        Serial.println(" Updating Brightness");
+        ledctl.setMaxBrightness(val);
+      break;
+
+      case 's':
+        Serial.println(" Updating Speed");
+        ledctl.setSpeedMSPeriod(val);
+      break;
+
+      case 'u':
+        Serial.println(" Updating Updates");
+        ledctl.setUpdateMSPeriod(val);
+      break;
+
+      case 'm':
+        if(MODE_COUNT>(RUNNING_MODE)(val)){
+          modeResetCounter=ms;
+          globalMode = (RUNNING_MODE)(val);
+        }
+        break;
+      default:
+        break;
     }
   }
 }
@@ -141,7 +170,7 @@ void eventTriggers(unsigned int hours, unsigned int minutes){
   /*********************************************************
   GREEN LIGHT
   *********************************************************/
-  if((hours>=8 && hours <=23) || (GetMode()!=mode_normal)){
+  if((hours>=9 && hours <=22) || (GetMode()!=mode_normal)){
     digitalWrite(GREEN_LIGHT,HIGH);
   }else{
     digitalWrite(GREEN_LIGHT,LOW);
@@ -180,7 +209,6 @@ void eventTriggers(unsigned int hours, unsigned int minutes){
 void buttonModeChange(unsigned int ms)
 {
   static bool lastButtonRead=true;
-  static unsigned int resetMarkPoint;
   bool val = digitalRead(BUTTON_PIN);
 
   if(lastButtonRead!=val && val==0)
@@ -189,13 +217,12 @@ void buttonModeChange(unsigned int ms)
     next += 1;
     next %= (int)MODE_COUNT;
     globalMode = (RUNNING_MODE)next;
-    resetMarkPoint=ms;
+    modeResetCounter=ms;
   }
   lastButtonRead = val;
 
-  if(globalMode!=mode_normal && (MS_UNTIL_MODE_RETURN<(ms-resetMarkPoint)))
+  if(globalMode!=mode_normal && (MS_UNTIL_MODE_RETURN<(ms-modeResetCounter)))
   {
     globalMode=mode_normal;
   }
 }
-
